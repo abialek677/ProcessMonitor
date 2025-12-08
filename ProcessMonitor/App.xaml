@@ -6,5 +6,6 @@
     <Application.Resources>
         <local:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         <local:BoolToColorConverter x:Key="BoolToColorConverter"/>
+        <local:MonitoringDurationConverter x:Key="MonitoringDurationConverter"/>
     </Application.Resources>
 </Application>

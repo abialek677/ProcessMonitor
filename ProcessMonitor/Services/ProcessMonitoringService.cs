@@ -175,18 +175,23 @@ namespace ProcessMonitor.Services
             {
                 while (!_cancelTokens.GetValueOrDefault(processId, false))
                 {
+                    ProcessSnapshot snapshot = null;
+
                     try
                     {
-                        var snapshot = GetProcessSnapshot(processId);
-                        if (snapshot == null)
-                            break;
-
-                        onSnapshot?.Invoke(snapshot);
+                        snapshot = GetProcessSnapshot(processId);
                     }
                     catch
                     {
-                        break;
+                        // jakikolwiek wyjątek = kończymy monitoring
+                        snapshot = null;
                     }
+
+                    // ważne: POWIADOM VM nawet o null
+                    onSnapshot?.Invoke(snapshot);
+
+                    if (snapshot == null)
+                        break;
 
                     await Task.Delay(samplingIntervalMs);
                 }

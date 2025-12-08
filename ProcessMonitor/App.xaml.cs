@@ -2,6 +2,7 @@
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
+using ProcessMonitor.Models;
 
 namespace ProcessMonitor
 {
@@ -32,4 +33,23 @@ namespace ProcessMonitor
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
             throw new NotSupportedException();
     }
+    
+    public class MonitoringDurationConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is MonitoredProcess proc)
+            {
+                var end = proc.MonitoringEndTime ?? DateTime.Now;
+                var duration = end - proc.MonitoringStartTime;
+                return $"{duration.Hours:D2}:{duration.Minutes:D2}:{duration.Seconds:D2}";
+            }
+
+            return "00:00:00";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+            throw new NotSupportedException();
+    }
+
 }

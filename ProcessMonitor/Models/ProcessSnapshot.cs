@@ -77,6 +77,15 @@ namespace ProcessMonitor.Models
             get => _totalMemoryAccumulated;
             set => Set(ref _totalMemoryAccumulated, value);
         }
+        
+        private string _durationText;
+        public string DurationText
+        {
+            get => _durationText;
+            set => Set(ref _durationText, value);
+        }
+
+
 
         public string FormattedMemory(long bytes) => $"{bytes / 1024 / 1024} MB";
 

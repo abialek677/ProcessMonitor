@@ -49,12 +49,24 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
-
+                                    
+                                    
                                     <TextBlock Text="{Binding ProcessName}"
-                                               FontWeight="Bold"
-                                               ToolTip="{Binding ProcessName,
-                                                                 StringFormat='Śledzony od {0}'}"/>
+                                               FontWeight="Bold">
+                                        <TextBlock.ToolTip>
+                                            <ToolTip>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding MonitoringStartTime, StringFormat='Śledzony od: {0:G}'}"/>
+                                                    <TextBlock Text="{Binding MonitoringEndTime, StringFormat='Zakończono: {0:G}'}"/>
+                                                    <TextBlock Text="{Binding IsMonitoring, StringFormat='Status: {0}'}"/>
+                                                    <TextBlock Text="{Binding DurationText, StringFormat='Czas śledzenia: {0}'}"/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </TextBlock.ToolTip>
+                                    </TextBlock>
 
+
+                                    
                                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0">
                                         <TextBlock Text="Max: "/>
                                         <TextBlock Text="{Binding MaxMemoryUsage, StringFormat='{}{0:N0} B'}"

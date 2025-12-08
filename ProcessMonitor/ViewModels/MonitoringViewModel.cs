@@ -61,15 +61,29 @@ namespace ProcessMonitor.ViewModels
 
             _service.StartMonitoringProcess(processId, processName, SamplingIntervalMs, snapshot =>
             {
-                if (snapshot == null) return;
+                if (!_processSnapshots.TryGetValue(processId, out var proc))
+                    return;
 
-                if (_processSnapshots.TryGetValue(processId, out var proc))
+                if (snapshot == null)
                 {
-                    proc.MaxMemoryUsage = Math.Max(proc.MaxMemoryUsage, snapshot.MemoryUsage);
-                    proc.TotalMemoryAccumulated += snapshot.MemoryUsage;
-                    proc.SampleCount++;
-                    proc.AverageMemoryUsage = proc.TotalMemoryAccumulated / Math.Max(1, proc.SampleCount);
+                    proc.IsMonitoring = false;
+                    proc.MonitoringEndTime = DateTime.Now;
+
+                    var endFinal = proc.MonitoringEndTime.Value;
+                    var durationFinal = endFinal - proc.MonitoringStartTime;
+                    proc.DurationText = $"{durationFinal.Hours:D2}:{durationFinal.Minutes:D2}:{durationFinal.Seconds:D2}";
+
+                    return;
                 }
+
+                proc.MaxMemoryUsage = Math.Max(proc.MaxMemoryUsage, snapshot.MemoryUsage);
+                proc.TotalMemoryAccumulated += snapshot.MemoryUsage;
+                proc.SampleCount++;
+                proc.AverageMemoryUsage = proc.TotalMemoryAccumulated / Math.Max(1, proc.SampleCount);
+
+                var end = proc.MonitoringEndTime ?? DateTime.Now;
+                var duration = end - proc.MonitoringStartTime;
+                proc.DurationText = $"{duration.Hours:D2}:{duration.Minutes:D2}:{duration.Seconds:D2}";
             });
         }
 
