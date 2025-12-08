@@ -13,66 +13,57 @@ namespace ProcessMonitor.Services
         private readonly Dictionary<int, Task> _monitoringTasks = new();
         private readonly Dictionary<int, bool> _cancelTokens = new();
 
+        // LEKKI listing do listy procesów
         public List<ProcessInfo> GetAllProcesses()
         {
             var result = new List<ProcessInfo>();
 
-            try
+            foreach (var proc in Process.GetProcesses())
             {
-                foreach (var proc in Process.GetProcesses())
+                try
                 {
-                    var info = ConvertToProcessInfo(proc);
-                    if (info != null)
-                        result.Add(info);
+                    var info = new ProcessInfo
+                    {
+                        ProcessId = proc.Id,
+                        ProcessName = proc.ProcessName,
+                        ThreadCount = proc.Threads.Count,
+                        WorkingSet = proc.WorkingSet64,
+                        StartTime = SafeGetStartTime(proc)
+                    };
+
+                    try { info.Priority = (int)proc.PriorityClass; }
+                    catch { info.Priority = 0; }
+
+                    try { info.ProcessPath = proc.MainModule?.FileName ?? "N/A"; }
+                    catch { info.ProcessPath = "N/A"; }
+
+                    result.Add(info);
                 }
-            }
-            catch
-            {
-                // Ignoruj globalne błędy, ale rezultat i tak będzie tym co się udało zebrać
+                catch
+                {
+                    // pojedyncze procesy z błędami pomijamy
+                }
             }
 
             return result.OrderBy(p => p.ProcessName).ToList();
         }
 
-        private ProcessInfo ConvertToProcessInfo(Process process)
+        // Szczegóły dla master/detail – wywołuj TYLKO dla zaznaczonego procesu
+        public void PopulateDetails(ProcessInfo info)
         {
+            if (info == null) return;
+
             try
             {
-                var info = new ProcessInfo
-                {
-                    ProcessId = process.Id,
-                    ProcessName = process.ProcessName,
-                    ThreadCount = process.Threads.Count,
-                    WorkingSet = process.WorkingSet64,
-                    StartTime = SafeGetStartTime(process)
-                };
+                var proc = Process.GetProcessById(info.ProcessId);
 
-                // Priorytet może rzucić wyjątek przy braku uprawnień
+                // NAJPIERW zbierz dane w lokalne listy (poza UI thread)
+                var threads = new List<ThreadInfo>();
                 try
                 {
-                    info.Priority = (int)process.PriorityClass;
-                }
-                catch
-                {
-                    info.Priority = 0;
-                }
-
-                // Ścieżka
-                try
-                {
-                    info.ProcessPath = process.MainModule?.FileName ?? "N/A";
-                }
-                catch
-                {
-                    info.ProcessPath = "N/A";
-                }
-
-                // Wątki
-                try
-                {
-                    foreach (ProcessThread thread in process.Threads)
+                    foreach (ProcessThread thread in proc.Threads)
                     {
-                        info.Threads.Add(new ThreadInfo
+                        threads.Add(new ThreadInfo
                         {
                             ThreadId = thread.Id,
                             ThreadState = thread.ThreadState.ToString(),
@@ -80,17 +71,14 @@ namespace ProcessMonitor.Services
                         });
                     }
                 }
-                catch
-                {
-                    // brak uprawnień do wątków – pomijamy
-                }
+                catch { }
 
-                // Moduły
+                var modules = new List<ModuleInfo>();
                 try
                 {
-                    foreach (ProcessModule module in process.Modules)
+                    foreach (ProcessModule module in proc.Modules)
                     {
-                        info.Modules.Add(new ModuleInfo
+                        modules.Add(new ModuleInfo
                         {
                             ModuleName = module.ModuleName,
                             ModuleFileName = module.FileName,
@@ -98,30 +86,31 @@ namespace ProcessMonitor.Services
                         });
                     }
                 }
-                catch
-                {
-                    // brak uprawnień – pomijamy
-                }
+                catch { }
 
-                return info;
+                // A potem zaktualizuj ObservableCollection na wątku UI
+                System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    info.Threads.Clear();
+                    foreach (var t in threads)
+                        info.Threads.Add(t);
+
+                    info.Modules.Clear();
+                    foreach (var m in modules)
+                        info.Modules.Add(m);
+                }));
             }
             catch
             {
-                // Jakikolwiek wyjątek – zwróć null, ale nie wywalaj całej listy
-                return null;
+                // proces mógł się zakończyć / brak uprawnień
             }
         }
 
+
         private DateTime SafeGetStartTime(Process process)
         {
-            try
-            {
-                return process.StartTime;
-            }
-            catch
-            {
-                return DateTime.MinValue;
-            }
+            try { return process.StartTime; }
+            catch { return DateTime.MinValue; }
         }
 
         public bool SetProcessPriority(int processId, ProcessPriorityClass priority)

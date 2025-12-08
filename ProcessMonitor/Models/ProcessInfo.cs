@@ -11,6 +11,8 @@ namespace ProcessMonitor.Models
         public string ProcessPath { get; set; }
         public int ThreadCount { get; set; }
         public long WorkingSet { get; set; } // bytes
+        
+        public double WorkingSetMb => WorkingSet / 1024.0 / 1024.0;
         public int Priority { get; set; }
         public DateTime StartTime { get; set; }
 

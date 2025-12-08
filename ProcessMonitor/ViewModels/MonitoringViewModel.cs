@@ -1,7 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Linq;
 using System.Windows.Input;
 using ProcessMonitor.Models;
 using ProcessMonitor.Services;
@@ -10,12 +9,11 @@ namespace ProcessMonitor.ViewModels
 {
     public class MonitoringViewModel : ViewModelBase
     {
-        private ProcessMonitoringService _service = new ProcessMonitoringService();
-        private ObservableCollection<MonitoredProcess> _monitoredProcesses;
+        private readonly ProcessMonitoringService _service = new();
+        private readonly Dictionary<int, MonitoredProcess> _processSnapshots = new();
+        private ObservableCollection<MonitoredProcess> _monitoredProcesses = new();
         private MonitoredProcess _selectedMonitoredProcess;
-        private int _samplingIntervalMs = 500;
-
-        private Dictionary<int, MonitoredProcess> _processSnapshots = new Dictionary<int, MonitoredProcess>();
+        private int _samplingIntervalMs = 1000; // sensowny default
 
         public ObservableCollection<MonitoredProcess> MonitoredProcesses
         {
@@ -39,8 +37,7 @@ namespace ProcessMonitor.ViewModels
 
         public MonitoringViewModel()
         {
-            MonitoredProcesses = new ObservableCollection<MonitoredProcess>();
-            RemoveMonitoringCommand = new RelayCommand(ExecuteRemoveMonitoring, _ => SelectedMonitoredProcess != null);
+            RemoveMonitoringCommand = new RelayCommand(_ => ExecuteRemoveMonitoring(), _ => SelectedMonitoredProcess != null);
         }
 
         public void StartMonitoring(int processId, string processName)
@@ -64,6 +61,8 @@ namespace ProcessMonitor.ViewModels
 
             _service.StartMonitoringProcess(processId, processName, SamplingIntervalMs, snapshot =>
             {
+                if (snapshot == null) return;
+
                 if (_processSnapshots.TryGetValue(processId, out var proc))
                 {
                     proc.MaxMemoryUsage = Math.Max(proc.MaxMemoryUsage, snapshot.MemoryUsage);
@@ -85,7 +84,7 @@ namespace ProcessMonitor.ViewModels
             }
         }
 
-        private void ExecuteRemoveMonitoring(object _)
+        private void ExecuteRemoveMonitoring()
         {
             if (SelectedMonitoredProcess == null) return;
 

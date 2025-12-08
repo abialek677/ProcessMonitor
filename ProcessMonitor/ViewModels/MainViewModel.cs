@@ -1,24 +1,11 @@
 ﻿using System.Windows.Input;
-using ProcessMonitor.ViewModels;
 
 namespace ProcessMonitor.ViewModels
 {
     public class MainViewModel : ViewModelBase
     {
-        private ProcessListViewModel _processListViewModel;
-        private MonitoringViewModel _monitoringViewModel;
-
-        public ProcessListViewModel ProcessListViewModel
-        {
-            get => _processListViewModel;
-            set => Set(ref _processListViewModel, value);
-        }
-
-        public MonitoringViewModel MonitoringViewModel
-        {
-            get => _monitoringViewModel;
-            set => Set(ref _monitoringViewModel, value);
-        }
+        public ProcessListViewModel ProcessListViewModel { get; }
+        public MonitoringViewModel MonitoringViewModel { get; }
 
         public ICommand StartMonitoringCommand { get; }
         public ICommand StopMonitoringCommand { get; }
@@ -26,26 +13,20 @@ namespace ProcessMonitor.ViewModels
         public MainViewModel()
         {
             ProcessListViewModel = new ProcessListViewModel();
-            MonitoringViewModel = new MonitoringViewModel();
+            MonitoringViewModel  = new MonitoringViewModel();
 
             StartMonitoringCommand = new RelayCommand(_ =>
             {
-                if (ProcessListViewModel.SelectedProcess != null)
-                {
-                    MonitoringViewModel.StartMonitoring(
-                        ProcessListViewModel.SelectedProcess.ProcessId,
-                        ProcessListViewModel.SelectedProcess.ProcessName);
-                }
+                var p = ProcessListViewModel.SelectedProcess;
+                if (p != null)
+                    MonitoringViewModel.StartMonitoring(p.ProcessId, p.ProcessName);
             });
 
-            StartMonitoringCommand = new RelayCommand(_ =>
+            StopMonitoringCommand = new RelayCommand(_ =>
             {
-                if (ProcessListViewModel.SelectedProcess != null)
-                {
-                    MonitoringViewModel.StartMonitoring(
-                        ProcessListViewModel.SelectedProcess.ProcessId,
-                        ProcessListViewModel.SelectedProcess.ProcessName);
-                }
+                var p = ProcessListViewModel.SelectedProcess;
+                if (p != null)
+                    MonitoringViewModel.StopMonitoring(p.ProcessId);
             });
         }
     }

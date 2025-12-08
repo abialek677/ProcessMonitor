@@ -10,14 +10,12 @@
             <ColumnDefinition Width="350" MinWidth="300"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Master-Detail: Lista procesów i szczegóły -->
         <Grid Grid.Column="0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="350" MinHeight="250"/>
             </Grid.RowDefinitions>
 
-            <!-- WAŻNE: przekazujemy cały MainViewModel jako DataContext -->
             <uc:ProcessListControl Grid.Row="0" DataContext="{Binding}"/>
 
             <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch" Background="#D0D0D0" Cursor="SizeNS"/>
@@ -27,7 +25,6 @@
                                      Visibility="{Binding ProcessListViewModel.SelectedProcess, Converter={StaticResource NullToVisibilityConverter}}"/>
         </Grid>
 
-        <!-- Sidebar: Monitorowane procesy -->
         <Border Grid.Column="1" Background="#F5F5F5" BorderThickness="1,0,0,0" BorderBrush="#D0D0D0">
             <Grid>
                 <Grid.RowDefinitions>
