@@ -7,7 +7,7 @@ namespace ProcessMonitor.ViewModels
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = "") =>
+        private void OnPropertyChanged([CallerMemberName] string propertyName = "") =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
         protected bool Set<T>(ref T field, T value, [CallerMemberName] string propertyName = "")

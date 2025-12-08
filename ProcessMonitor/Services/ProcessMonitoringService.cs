@@ -1,19 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 using ProcessMonitor.Models;
 using ProjectMonitor.Models;
 
-namespace ProcessMonitor.Services
-{
+namespace ProcessMonitor.Services;
+
     public class ProcessMonitoringService
     {
         private readonly Dictionary<int, Task> _monitoringTasks = new();
         private readonly Dictionary<int, bool> _cancelTokens = new();
-
-        // LEKKI listing do listy procesów
+        
         public List<ProcessInfo> GetAllProcesses()
         {
             var result = new List<ProcessInfo>();
@@ -41,24 +36,21 @@ namespace ProcessMonitor.Services
                 }
                 catch
                 {
-                    // pojedyncze procesy z błędami pomijamy
+                    // processess with errors skipped
                 }
             }
 
             return result.OrderBy(p => p.ProcessName).ToList();
         }
-
-        // Szczegóły dla master/detail – wywołuj TYLKO dla zaznaczonego procesu
-        public void PopulateDetails(ProcessInfo info)
+        
+        public void PopulateDetails(ProcessInfo? info)
         {
             if (info == null) return;
 
             try
             {
                 var proc = Process.GetProcessById(info.ProcessId);
-
-                // NAJPIERW zbierz dane w lokalne listy (poza UI thread)
-                var threads = new List<ThreadInfo>();
+                var threads = new List<ThreadInfo>(proc.Threads.Count);
                 try
                 {
                     foreach (ProcessThread thread in proc.Threads)
@@ -73,7 +65,7 @@ namespace ProcessMonitor.Services
                 }
                 catch { }
 
-                var modules = new List<ModuleInfo>();
+                var modules = new List<ModuleInfo>(proc.Modules.Count);
                 try
                 {
                     foreach (ProcessModule module in proc.Modules)
@@ -87,8 +79,7 @@ namespace ProcessMonitor.Services
                     }
                 }
                 catch { }
-
-                // A potem zaktualizuj ObservableCollection na wątku UI
+                
                 System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                 {
                     info.Threads.Clear();
@@ -100,10 +91,7 @@ namespace ProcessMonitor.Services
                         info.Modules.Add(m);
                 }));
             }
-            catch
-            {
-                // proces mógł się zakończyć / brak uprawnień
-            }
+            catch { }
         }
 
 
@@ -113,35 +101,27 @@ namespace ProcessMonitor.Services
             catch { return DateTime.MinValue; }
         }
 
-        public bool SetProcessPriority(int processId, ProcessPriorityClass priority)
+        public void SetProcessPriority(int processId, ProcessPriorityClass priority)
         {
             try
             {
                 var process = Process.GetProcessById(processId);
                 process.PriorityClass = priority;
-                return true;
             }
-            catch
-            {
-                return false;
-            }
+            catch { }
         }
 
-        public bool KillProcess(int processId)
+        public void KillProcess(int processId)
         {
             try
             {
                 var process = Process.GetProcessById(processId);
                 process.Kill();
-                return true;
             }
-            catch
-            {
-                return false;
-            }
+            catch { }
         }
 
-        public ProcessSnapshot GetProcessSnapshot(int processId)
+        private ProcessSnapshot? GetProcessSnapshot(int processId)
         {
             try
             {
@@ -160,14 +140,13 @@ namespace ProcessMonitor.Services
             }
         }
 
-        public Task StartMonitoringProcess(
+        public void StartMonitoringProcess(
             int processId,
-            string processName,
             int samplingIntervalMs,
             Action<ProcessSnapshot> onSnapshot)
         {
             if (_monitoringTasks.ContainsKey(processId))
-                return _monitoringTasks[processId];
+                return;
 
             _cancelTokens[processId] = false;
 
@@ -175,7 +154,7 @@ namespace ProcessMonitor.Services
             {
                 while (!_cancelTokens.GetValueOrDefault(processId, false))
                 {
-                    ProcessSnapshot snapshot = null;
+                    ProcessSnapshot? snapshot;
 
                     try
                     {
@@ -183,11 +162,9 @@ namespace ProcessMonitor.Services
                     }
                     catch
                     {
-                        // jakikolwiek wyjątek = kończymy monitoring
                         snapshot = null;
                     }
-
-                    // ważne: POWIADOM VM nawet o null
+                    
                     onSnapshot?.Invoke(snapshot);
 
                     if (snapshot == null)
@@ -201,7 +178,6 @@ namespace ProcessMonitor.Services
             });
 
             _monitoringTasks[processId] = task;
-            return task;
         }
 
         public void StopMonitoringProcess(int processId)
@@ -209,7 +185,5 @@ namespace ProcessMonitor.Services
             if (_cancelTokens.ContainsKey(processId))
                 _cancelTokens[processId] = true;
         }
-
-        public bool IsMonitoring(int processId) => _monitoringTasks.ContainsKey(processId);
     }
-}
+

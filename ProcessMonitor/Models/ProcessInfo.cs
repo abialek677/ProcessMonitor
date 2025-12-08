@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using ProjectMonitor.Models;
 
 namespace ProcessMonitor.Models
@@ -7,8 +6,8 @@ namespace ProcessMonitor.Models
     public class ProcessInfo
     {
         public int ProcessId { get; set; }
-        public string ProcessName { get; set; }
-        public string ProcessPath { get; set; }
+        public string ProcessName { get; set; } = string.Empty;
+        public string ProcessPath { get; set; } = string.Empty;
         public int ThreadCount { get; set; }
         public long WorkingSet { get; set; } // bytes
         
@@ -19,7 +18,5 @@ namespace ProcessMonitor.Models
         // Szczegóły ładowane na żądanie (dla master/detail)
         public ObservableCollection<ThreadInfo> Threads { get; } = new();
         public ObservableCollection<ModuleInfo> Modules { get; } = new();
-
-        public override string ToString() => $"{ProcessName} (PID: {ProcessId})";
     }
 }
