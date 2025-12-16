@@ -88,13 +88,13 @@
             
             <DataGrid.Columns>
                 <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="70" />
-                <DataGridTextColumn Header="Nazwa" Binding="{Binding ProcessName}" Width="200" />
-                <DataGridTextColumn Header="Wątki" Binding="{Binding ThreadCount}" Width="70" />
-                <DataGridTextColumn Header="Pamięć (MB)"
+                <DataGridTextColumn Header="Name" Binding="{Binding ProcessName}" Width="200" />
+                <DataGridTextColumn Header="Threads" Binding="{Binding ThreadCount}" Width="70" />
+                <DataGridTextColumn Header="Memory (MB)"
                                     Binding="{Binding WorkingSetMb, StringFormat='{}{0:N3}'}"
                                     Width="100" />
-                <DataGridTextColumn Header="Priorytet" Binding="{Binding Priority}" Width="80" />
-                <DataGridTextColumn Header="Ścieżka" Binding="{Binding ProcessPath}" Width="300" />
+                <DataGridTextColumn Header="Priority" Binding="{Binding Priority}" Width="80" />
+                <DataGridTextColumn Header="Path" Binding="{Binding ProcessPath}" Width="300" />
             </DataGrid.Columns>
         </DataGrid>
 

@@ -1,5 +1,4 @@
 ﻿using System.Collections.ObjectModel;
-using ProcessMonitor.Models;
 
 namespace ProcessMonitor.Models
 {
