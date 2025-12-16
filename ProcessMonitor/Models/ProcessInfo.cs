@@ -1,5 +1,5 @@
 ﻿using System.Collections.ObjectModel;
-using ProjectMonitor.Models;
+using ProcessMonitor.Models;
 
 namespace ProcessMonitor.Models
 {
@@ -9,13 +9,12 @@ namespace ProcessMonitor.Models
         public string ProcessName { get; set; } = string.Empty;
         public string ProcessPath { get; set; } = string.Empty;
         public int ThreadCount { get; set; }
-        public long WorkingSet { get; set; } // bytes
-        
         public bool IsMonitored { get; set; }
         public DateTime? MonitoringStartTime { get; set; }
-        
-        public double WorkingSetMb => WorkingSet / 1024.0 / 1024.0;
         public int Priority { get; set; }
+        
+        public long WorkingSet { get; set; } // bytes
+        public double WorkingSetMb => WorkingSet / 1024.0 / 1024.0;
         public DateTime StartTime { get; set; }
 
         // master/detail

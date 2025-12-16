@@ -1,8 +1,8 @@
-﻿namespace ProjectMonitor.Models;
+﻿namespace ProcessMonitor.Models;
 
 public class ThreadInfo
 {
     public int ThreadId { get; set; }
-    public string ThreadState { get; set; }
+    public string ThreadState { get; set; } = string.Empty;
     public int Priority { get; set; }
 }

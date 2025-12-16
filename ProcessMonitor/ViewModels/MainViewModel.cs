@@ -4,12 +4,11 @@ namespace ProcessMonitor.ViewModels
 {
     public class MainViewModel : ViewModelBase
     {
-        public ProcessListViewModel ProcessListViewModel { get; }
         public MonitoringViewModel MonitoringViewModel { get; }
-
         public ICommand StartMonitoringCommand { get; }
         public ICommand StopMonitoringCommand { get; }
-
+        public ProcessListViewModel ProcessListViewModel { get; }
+        
         public MainViewModel()
         {
             var monitoringVm = new MonitoringViewModel();

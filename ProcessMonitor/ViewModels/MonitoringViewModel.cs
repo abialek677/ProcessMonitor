@@ -7,10 +7,11 @@ namespace ProcessMonitor.ViewModels;
 
 public class MonitoringViewModel : ViewModelBase
 {
+    public ICommand RemoveMonitoringCommand { get; }
     private readonly ProcessMonitoringService _service = new();
     private readonly Dictionary<int, MonitoredProcess> _processSnapshots = new();
     private ObservableCollection<MonitoredProcess> _monitoredProcesses = new();
-    private MonitoredProcess _selectedMonitoredProcess;
+    private MonitoredProcess? _selectedMonitoredProcess;
     private int _samplingIntervalMs = 1000; // sampling interval in ms for monitored processes
 
     public ObservableCollection<MonitoredProcess> MonitoredProcesses
@@ -19,7 +20,7 @@ public class MonitoringViewModel : ViewModelBase
         set => Set(ref _monitoredProcesses, value);
     }
 
-    public MonitoredProcess SelectedMonitoredProcess
+    public MonitoredProcess? SelectedMonitoredProcess
     {
         get => _selectedMonitoredProcess;
         set => Set(ref _selectedMonitoredProcess, value);
@@ -30,9 +31,7 @@ public class MonitoringViewModel : ViewModelBase
         get => _samplingIntervalMs;
         set => Set(ref _samplingIntervalMs, value);
     }
-
-    public ICommand RemoveMonitoringCommand { get; }
-
+    
     public MonitoringViewModel()
     {
         RemoveMonitoringCommand =
@@ -90,11 +89,10 @@ public class MonitoringViewModel : ViewModelBase
     {
         _service.StopMonitoringProcess(processId);
 
-        if (_processSnapshots.TryGetValue(processId, out var proc))
-        {
-            proc.IsMonitoring = false;
-            proc.MonitoringEndTime = DateTime.Now;
-        }
+        if (!_processSnapshots.TryGetValue(processId, out var proc)) return;
+        
+        proc.IsMonitoring = false;
+        proc.MonitoringEndTime = DateTime.Now;
     }
 
     private void ExecuteRemoveMonitoring()

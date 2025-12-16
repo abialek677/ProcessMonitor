@@ -6,7 +6,7 @@ namespace ProcessMonitor.Models;
 public class MonitoredProcess : INotifyPropertyChanged
     {
         private int _processId;
-        private string _processName;
+        private string _processName = string.Empty;
         private DateTime _monitoringStartTime;
         private DateTime? _monitoringEndTime;
         private long _maxMemoryUsage;
@@ -14,6 +14,7 @@ public class MonitoredProcess : INotifyPropertyChanged
         private int _sampleCount;
         private bool _isMonitoring;
         private long _totalMemoryAccumulated;
+        private string _durationText = string.Empty;
 
         public int ProcessId
         {
@@ -69,25 +70,18 @@ public class MonitoredProcess : INotifyPropertyChanged
             set => Set(ref _totalMemoryAccumulated, value);
         }
         
-        private string _durationText;
         public string DurationText
         {
             get => _durationText;
             set => Set(ref _durationText, value);
         }
 
+        public event PropertyChangedEventHandler? PropertyChanged;
 
-
-        public string FormattedMemory(long bytes) => $"{bytes / 1024 / 1024} MB";
-
-        public override string ToString() => $"{ProcessName} (PID: {ProcessId})";
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = null) =>
+        private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-        protected bool Set<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
+        private bool Set<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
         {
             if (Equals(field, value)) return false;
             field = value;

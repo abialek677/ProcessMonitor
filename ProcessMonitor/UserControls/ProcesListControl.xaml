@@ -11,34 +11,34 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Opcje filtrowania/sortowania -->
+        <!-- filtering/sorting -->
         <Grid Grid.Row="0" Background="#F0F0F0" Margin="0">
             <StackPanel Margin="10,10,10,10">
-                <TextBlock Text="Opcje filtrowania" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,10,0" />
+                <TextBlock Text="Filtering options" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,10,0" />
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
                     <TextBlock Text="PID:" Margin="10,0,3,0" VerticalAlignment="Center"/>
                     <TextBox Text="{Binding FilterPidText, UpdateSourceTrigger=PropertyChanged}"
                              Width="80" Padding="5" BorderThickness="1" BorderBrush="#CCC" />
-                    <TextBlock Text="Nazwa:" VerticalAlignment="Center" Margin="15,0,10,0" />
+                    <TextBlock Text="Name:" VerticalAlignment="Center" Margin="15,0,10,0" />
                     <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
                              Width="150" Padding="5" BorderThickness="1" BorderBrush="#CCC" />
-                    <TextBlock Text="Min wątki:" VerticalAlignment="Center" Margin="15,0,5,0" />
+                    <TextBlock Text="Min threads:" VerticalAlignment="Center" Margin="15,0,5,0" />
                     <TextBox Text="{Binding MinThreadsText, UpdateSourceTrigger=PropertyChanged}"
                              Width="60" Padding="3" BorderThickness="1" BorderBrush="#CCC" />
-                    <TextBlock Text="Max wątki:" VerticalAlignment="Center" Margin="15,0,5,0" />
+                    <TextBlock Text="Max threads:" VerticalAlignment="Center" Margin="15,0,5,0" />
                     <TextBox Text="{Binding MaxThreadsText, UpdateSourceTrigger=PropertyChanged}"
                              Width="60" Padding="3" BorderThickness="1" BorderBrush="#CCC" />
-                    <TextBlock Text="Min pamięć (MB):" VerticalAlignment="Center" Margin="15,0,5,0" />
+                    <TextBlock Text="Min memory (MB):" VerticalAlignment="Center" Margin="15,0,5,0" />
                     <TextBox Text="{Binding MinMemoryMbText, UpdateSourceTrigger=PropertyChanged}"
                              Width="80" Padding="3" BorderThickness="1" BorderBrush="#CCC" />
-                    <TextBlock Text="Max pamięć (MB):" VerticalAlignment="Center" Margin="15,0,5,0" />
+                    <TextBlock Text="Max memory (MB):" VerticalAlignment="Center" Margin="15,0,5,0" />
                     <TextBox Text="{Binding MaxMemoryMbText, UpdateSourceTrigger=PropertyChanged}"
                              Width="80" Padding="3" BorderThickness="1" BorderBrush="#CCC" />
                 </StackPanel>
             </StackPanel>
         </Grid>
 
-        <!-- Refresh -->
+        <!-- refresh -->
         <Grid Grid.Row="1" Background="#F0F0F0" Margin="0">
             <StackPanel Orientation="Horizontal" Margin="10,10,10,10">
                 <Button Command="{Binding RefreshCommand}"
@@ -46,10 +46,10 @@
                         Background="#0078D4"
                         Foreground="White"
                         Margin="0,0,10,0"
-                        Content="Odśwież teraz" />
+                        Content="Refresh now" />
 
                 <CheckBox IsChecked="{Binding IsAutoRefreshing}" VerticalAlignment="Center" Margin="0,0,10,0">
-                    <TextBlock Text="Automatyczne odświeżanie co " />
+                    <TextBlock Text="Automatic refresh every " />
                 </CheckBox>
 
                 <TextBox Text="{Binding RefreshIntervalMs}" Width="50" Padding="5"
@@ -58,7 +58,7 @@
             </StackPanel>
         </Grid>
 
-        <!-- Processes -->
+        <!-- processes -->
         <DataGrid Grid.Row="2"
                   ItemsSource="{Binding Processes}"
                   SelectedItem="{Binding SelectedProcess}"
@@ -98,19 +98,19 @@
             </DataGrid.Columns>
         </DataGrid>
 
-        <!-- Przyciski akcji -->
+        <!-- actions -->
         <Grid Grid.Row="3" Background="#F0F0F0" Margin="0">
             <StackPanel Orientation="Horizontal" Margin="10,10,10,10">
                 <Button
                     Command="{Binding DataContext.StartMonitoringCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                     Padding="10,5"
                     Background="#107C10" Foreground="White" Margin="0,0,10,0">
-                    Śledź proces
+                    Track process
                 </Button>
 
                 <Button Command="{Binding KillProcessCommand}" Padding="10,5"
                         Background="#D13438" Foreground="White" Margin="0,0,10,0">
-                    Zabij proces
+                    Kill process
                 </Button>
 
                 <ComboBox x:Name="PriorityCombo" Width="150" Padding="5" Margin="0,0,10,0">
@@ -125,7 +125,7 @@
                 <Button Command="{Binding SetPriorityCommand}"
                         CommandParameter="{Binding SelectedItem, ElementName=PriorityCombo}"
                         Padding="10,5" Background="#0078D4" Foreground="White">
-                    Zmień priorytet
+                    Change priority
                 </Button>
             </StackPanel>
         </Grid>

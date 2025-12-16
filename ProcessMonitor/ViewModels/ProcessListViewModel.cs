@@ -9,23 +9,32 @@ namespace ProcessMonitor.ViewModels
 {
     public class ProcessListViewModel : ViewModelBase
     {
+        private readonly Dictionary<int, ProcessInfo> _processCache = new();
+        private ObservableCollection<ProcessInfo> _processes = [];
         private readonly ProcessMonitoringService _service = new();
-        private ObservableCollection<ProcessInfo> _processes = new();
-        private ProcessInfo _selectedProcess;
-        private string _filterText = "";
+        private readonly MonitoringViewModel _monitoringVm;
+        private ProcessInfo? _selectedProcess;
+        
+        // commands
+        public ICommand RefreshCommand { get; }
+        public ICommand SetPriorityCommand { get; }
+        public ICommand KillProcessCommand { get; }
+        
         private string _sortBy = "Name";
-        private Task _refreshTask;
+        private Task? _refreshTask;
         private bool _isAutoRefreshing;
         private int _refreshIntervalMs = 2000;
         private bool _shouldStopRefresh;
         private bool _isRefreshing;
         
-        private readonly Dictionary<int, ProcessInfo> _processCache = new();
-
-        
-        private readonly MonitoringViewModel _monitoringVm;
-        
+        // filtering fields
+        private string _minThreadsText = string.Empty;
+        private string _maxThreadsText = string.Empty;
+        private string _minMemoryMbText = string.Empty;
+        private string _maxMemoryMbText = string.Empty;
+        private string _filterText = "";
         private string _filterPidText;
+        
         public string FilterPidText
         {
             get => _filterPidText;
@@ -36,11 +45,6 @@ namespace ProcessMonitor.ViewModels
             }
         }
         
-        private string _minThreadsText;
-        private string _maxThreadsText;
-        private string _minMemoryMbText;
-        private string _maxMemoryMbText;
-
         public string MinThreadsText
         {
             get => _minThreadsText;
@@ -87,16 +91,18 @@ namespace ProcessMonitor.ViewModels
             set => Set(ref _processes, value);
         }
 
-        public ProcessInfo SelectedProcess
+        public ProcessInfo? SelectedProcess
         {
             get => _selectedProcess;
             set
             {
-                if (Set(ref _selectedProcess, value))
+                if (!Set(ref _selectedProcess, value))
                 {
-                    if (value != null)
-                        Task.Run(() => _service.PopulateDetails(value));
+                    return;
                 }
+                
+                if (value != null)
+                    Task.Run(() => _service.PopulateDetails(value));
             }
         }
 
@@ -140,11 +146,7 @@ namespace ProcessMonitor.ViewModels
                 }
             }
         }
-
-        public ICommand RefreshCommand { get; }
-        public ICommand SetPriorityCommand { get; }
-        public ICommand KillProcessCommand { get; }
-
+        
         public ProcessListViewModel(MonitoringViewModel monitoringVm)
         {
             _monitoringVm = monitoringVm;
@@ -155,10 +157,10 @@ namespace ProcessMonitor.ViewModels
             RefreshProcessList();
         }
 
-        public void RefreshProcessList()
+        private void RefreshProcessList()
         {
-            int?  minThreads  = int.TryParse(MinThreadsText,  out var mt) ? mt : null;
-            int?  maxThreads  = int.TryParse(MaxThreadsText,  out var xt) ? xt : null;
+            int? minThreads = int.TryParse(MinThreadsText, out var mt) ? mt : null;
+            int? maxThreads = int.TryParse(MaxThreadsText, out var xt) ? xt : null;
             long? minMemoryMb = long.TryParse(MinMemoryMbText, out var mm) ? mm : null;
             long? maxMemoryMb = long.TryParse(MaxMemoryMbText, out var xm) ? xm : null;
             
@@ -171,13 +173,10 @@ namespace ProcessMonitor.ViewModels
                 {
                     var all = _service.GetAllProcesses();
                     
-                    var updatedList = new List<ProcessInfo>();
-                    
                     foreach (var p in all)
                     {
                         if (_processCache.TryGetValue(p.ProcessId, out var existing))
                         {
-                            // aktualizujemy istniejący obiekt, żeby bindingi nie musiały się odpinać
                             existing.ProcessName = p.ProcessName;
                             existing.ThreadCount = p.ThreadCount;
                             existing.WorkingSet = p.WorkingSet;
@@ -186,13 +185,11 @@ namespace ProcessMonitor.ViewModels
                             existing.StartTime = p.StartTime;
                             existing.IsMonitored = p.IsMonitored;
                             existing.MonitoringStartTime = p.MonitoringStartTime;
-
-                            updatedList.Add(existing);
+                            
                         }
                         else
                         {
                             _processCache[p.ProcessId] = p;
-                            updatedList.Add(p);
                         }
                         
                         
@@ -246,23 +243,27 @@ namespace ProcessMonitor.ViewModels
 
                     Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                     {
-                        // zapamiętaj aktualnie wybrany PID (to, co user ma TERAZ)
                         var currentSelectedPid = SelectedProcess?.ProcessId;
 
-                        // zbuduj nową listę, ale bez ruszania SelectedProcess bez potrzeby
-                        Processes.Clear();
-                        foreach (var p in sorted)
-                            Processes.Add(p);
-
-                        if (currentSelectedPid.HasValue)
+                        // remove non-existing items
+                        for (var i = Processes.Count - 1; i >= 0; i--)
                         {
-                            var match = Processes.FirstOrDefault(x => x.ProcessId == currentSelectedPid.Value);
-                            if (match != null)
-                                SelectedProcess = match; // tylko jeśli proces nadal istnieje
-                            else
-                                SelectedProcess = null;  // proces zniknął – zaznaczenie znika naturalnie
+                            var item = Processes[i];
+                            if (!sorted.Contains(item))
+                                Processes.RemoveAt(i);
                         }
-                        // jeśli currentSelectedPid == null – nic nie zaznaczamy
+
+                        // add new items
+                        foreach (var p in sorted)
+                        {
+                            if (!Processes.Contains(p))
+                                Processes.Add(p);
+                        }
+
+                        if (!currentSelectedPid.HasValue) return;
+                        
+                        var match = Processes.FirstOrDefault(x => x.ProcessId == currentSelectedPid.Value);
+                        SelectedProcess = match;
                     }));
                 }
                 finally
@@ -272,7 +273,7 @@ namespace ProcessMonitor.ViewModels
             });
         }
 
-        public void StartAutoRefresh()
+        private void StartAutoRefresh()
         {
             _shouldStopRefresh = false;
             _refreshTask = Task.Run(async () =>
@@ -285,17 +286,15 @@ namespace ProcessMonitor.ViewModels
             });
         }
 
-        public void StopAutoRefresh() => _shouldStopRefresh = true;
+        private void StopAutoRefresh() => _shouldStopRefresh = true;
 
         private void ExecuteSetPriority(object priority)
         {
             if (SelectedProcess == null || priority == null) return;
 
-            if (Enum.TryParse<ProcessPriorityClass>(priority.ToString(), out var p))
-            {
-                _service.SetProcessPriority(SelectedProcess.ProcessId, p);
-                SelectedProcess.Priority = (int)p;
-            }
+            if (!Enum.TryParse<ProcessPriorityClass>(priority.ToString(), out var p)) return;
+            
+            _service.SetProcessPriority(SelectedProcess.ProcessId, p);
         }
 
         private void ExecuteKillProcess(object _)

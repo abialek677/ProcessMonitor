@@ -21,42 +21,46 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Text="PID:" FontWeight="Bold" Margin="0,5"/>
-                <TextBlock Grid.Column="1" Text="{Binding SelectedProcess.ProcessId}" Margin="10,5"/>
+                <!-- properties -->
+                <TextBlock Grid.Column="0" Grid.Row="0" Text="PID:" FontWeight="Bold" Margin="0,5"/>
+                <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding SelectedProcess.ProcessId}" Margin="10,5"/>
 
-                <TextBlock Grid.Row="1" Text="Nazwa:" FontWeight="Bold" Margin="0,5"/>
-                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedProcess.ProcessName}" Margin="10,5"/>
+                <TextBlock Grid.Column="0" Grid.Row="1" Text="Name:" FontWeight="Bold" Margin="0,5"/>
+                <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding SelectedProcess.ProcessName}" Margin="10,5"/>
 
-                <TextBlock Grid.Row="2" Text="Pamięć:" FontWeight="Bold" Margin="0,5"/>
-                <TextBlock Grid.Row="2" Grid.Column="1"
-                           Text="{Binding SelectedProcess.WorkingSet, StringFormat='{}{0:N0} bajtów'}"
+                <TextBlock Grid.Column="0" Grid.Row="2" Text="Memory:" FontWeight="Bold" Margin="0,5"/>
+                <TextBlock Grid.Column="1" Grid.Row="2"
+                           Text="{Binding SelectedProcess.WorkingSet, StringFormat='{}{0:N0} bytes'}"
                            Margin="10,5"/>
 
-                <TextBlock Grid.Row="3" Text="Ścieżka:" FontWeight="Bold" Margin="0,5"/>
-                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedProcess.ProcessPath}"
+                <TextBlock Grid.Column="0" Grid.Row="3" Text="Path:" FontWeight="Bold" Margin="0,5"/>
+                <TextBlock Grid.Column="1" Grid.Row="3" Text="{Binding SelectedProcess.ProcessPath}"
                            Margin="10,5" TextWrapping="Wrap"/>
             </Grid>
         </Border>
 
+        <!-- tabs -->
         <TabControl Grid.Row="1" Margin="10">
-            <TabItem Header="Wątki">
+            <!-- threads tab -->
+            <TabItem Header="Threads">
                 <DataGrid ItemsSource="{Binding SelectedProcess.Threads}"
                           AutoGenerateColumns="False" CanUserAddRows="False">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="ID Wątku" Binding="{Binding ThreadId}" Width="100"/>
-                        <DataGridTextColumn Header="Stan" Binding="{Binding ThreadState}" Width="150"/>
-                        <DataGridTextColumn Header="Priorytet" Binding="{Binding Priority}" Width="100"/>
+                        <DataGridTextColumn Header="Thread ID" Binding="{Binding ThreadId}" Width="100"/>
+                        <DataGridTextColumn Header="State" Binding="{Binding ThreadState}" Width="150"/>
+                        <DataGridTextColumn Header="Priority" Binding="{Binding Priority}" Width="100"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </TabItem>
 
-            <TabItem Header="Moduły">
+            <!-- modules tab -->
+            <TabItem Header="Modules">
                 <DataGrid ItemsSource="{Binding SelectedProcess.Modules}"
                           AutoGenerateColumns="False" CanUserAddRows="False">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Nazwa Modułu" Binding="{Binding ModuleName}" Width="200"/>
-                        <DataGridTextColumn Header="Ścieżka" Binding="{Binding ModuleFileName}" Width="400"/>
-                        <DataGridTextColumn Header="Rozmiar (KB)"
+                        <DataGridTextColumn Header="Name" Binding="{Binding ModuleName}" Width="200"/>
+                        <DataGridTextColumn Header="Path" Binding="{Binding ModuleFileName}" Width="400"/>
+                        <DataGridTextColumn Header="Size (KB)"
                                              Binding="{Binding ModuleMemorySize, StringFormat='{}{0:N0}'}"
                                              Width="100"/>
                     </DataGrid.Columns>

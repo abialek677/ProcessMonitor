@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using ProcessMonitor.Models;
-using ProjectMonitor.Models;
 
 namespace ProcessMonitor.Services;
 
@@ -41,7 +40,7 @@ namespace ProcessMonitor.Services;
                     }
                     catch
                     {
-                        // processess with errors skipped
+                        // suppress errors / skip erroneous processes
                     }
                 }
             }
@@ -72,7 +71,10 @@ namespace ProcessMonitor.Services;
                         });
                     }
                 }
-                catch { }
+                catch
+                {
+                    // suppress
+                }
 
                 var modules = new List<ModuleInfo>(proc.Modules.Count);
                 try
@@ -87,8 +89,11 @@ namespace ProcessMonitor.Services;
                         });
                     }
                 }
-                catch { }
-                
+                catch
+                {
+                    // suppress
+                }
+
                 System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                 {
                     info.Threads.Clear();
@@ -100,7 +105,10 @@ namespace ProcessMonitor.Services;
                         info.Modules.Add(m);
                 }));
             }
-            catch { }
+            catch
+            {
+                // suppress
+            }
         }
 
 
@@ -117,7 +125,10 @@ namespace ProcessMonitor.Services;
                 using var proc = Process.GetProcessById(processId);
                 proc.PriorityClass = priority;
             }
-            catch { }
+            catch
+            {
+                // suppress
+            }
         }
 
         public void KillProcess(int processId)
@@ -128,7 +139,10 @@ namespace ProcessMonitor.Services;
                 proc.Kill();
                 proc.WaitForExit(2000);
             }
-            catch { }
+            catch
+            {
+                // suppress
+            }
         }
 
         private ProcessSnapshot? GetProcessSnapshot(int processId)
@@ -157,9 +171,9 @@ namespace ProcessMonitor.Services;
         {
             if (!_monitoringTasks.TryAdd(processId, Task.CompletedTask))
                 return;
-            
+    
             var cts = new CancellationTokenSource();
-            
+    
             if (!_cts.TryAdd(processId, cts))
             {
                 _monitoringTasks.TryRemove(processId, out _);
@@ -169,9 +183,11 @@ namespace ProcessMonitor.Services;
 
             var task = Task.Run(async () =>
             {
+                using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(samplingIntervalMs));
+        
                 try
                 {
-                    while (!cts.Token.IsCancellationRequested)
+                    while (await timer.WaitForNextTickAsync(cts.Token))
                     {
                         var snapshot = GetProcessSnapshot(processId);
 
@@ -179,15 +195,16 @@ namespace ProcessMonitor.Services;
                         {
                             onSnapshot?.Invoke(snapshot);
                         }
-                        catch { }
+                        catch
+                        {
+                            // suppress
+                        }
 
                         if (snapshot == null)
                             break;
-
-                        await Task.Delay(samplingIntervalMs, cts.Token);
                     }
                 }
-                catch (TaskCanceledException)
+                catch (OperationCanceledException)
                 {
                     // expected on cancellation
                 }
