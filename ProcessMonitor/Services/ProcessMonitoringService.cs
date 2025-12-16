@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using ProcessMonitor.Models;
 using ProjectMonitor.Models;
 
@@ -6,41 +7,49 @@ namespace ProcessMonitor.Services;
 
     public class ProcessMonitoringService
     {
-        private readonly Dictionary<int, Task> _monitoringTasks = new();
-        private readonly Dictionary<int, bool> _cancelTokens = new();
+        private readonly ConcurrentDictionary<int, Task> _monitoringTasks = new();
+        private readonly ConcurrentDictionary<int, CancellationTokenSource> _cts = new();
         
         public List<ProcessInfo> GetAllProcesses()
         {
             var result = new List<ProcessInfo>();
 
-            foreach (var proc in Process.GetProcesses())
+            var processes = Process.GetProcesses();
+            
+            foreach (var proc in processes)
             {
-                try
+                using (proc)
                 {
-                    var info = new ProcessInfo
+                    try
                     {
-                        ProcessId = proc.Id,
-                        ProcessName = proc.ProcessName,
-                        ThreadCount = proc.Threads.Count,
-                        WorkingSet = proc.WorkingSet64,
-                        StartTime = SafeGetStartTime(proc)
-                    };
+                        var info = new ProcessInfo
+                        {
+                            ProcessId = proc.Id,
+                            ProcessName = proc.ProcessName,
+                            ThreadCount = proc.Threads.Count,
+                            WorkingSet = proc.WorkingSet64,
+                            StartTime = SafeGetStartTime(proc)
+                        };
 
-                    try { info.Priority = (int)proc.PriorityClass; }
-                    catch { info.Priority = 0; }
+                        try { info.Priority = proc.BasePriority; }
+                        catch { info.Priority = 0; }
 
-                    try { info.ProcessPath = proc.MainModule?.FileName ?? "N/A"; }
-                    catch { info.ProcessPath = "N/A"; }
+                        try { info.ProcessPath = proc.MainModule?.FileName ?? "N/A"; }
+                        catch { info.ProcessPath = "N/A"; }
 
-                    result.Add(info);
-                }
-                catch
-                {
-                    // processess with errors skipped
+                        result.Add(info);
+                    }
+                    catch
+                    {
+                        // processess with errors skipped
+                    }
                 }
             }
 
-            return result.OrderBy(p => p.ProcessName).ToList();
+            result.Sort((a, b) => 
+                string.Compare(a.ProcessName, b.ProcessName, StringComparison.OrdinalIgnoreCase));
+            
+            return result;
         }
         
         public void PopulateDetails(ProcessInfo? info)
@@ -49,7 +58,7 @@ namespace ProcessMonitor.Services;
 
             try
             {
-                var proc = Process.GetProcessById(info.ProcessId);
+                using var proc = Process.GetProcessById(info.ProcessId);
                 var threads = new List<ThreadInfo>(proc.Threads.Count);
                 try
                 {
@@ -105,8 +114,8 @@ namespace ProcessMonitor.Services;
         {
             try
             {
-                var process = Process.GetProcessById(processId);
-                process.PriorityClass = priority;
+                using var proc = Process.GetProcessById(processId);
+                proc.PriorityClass = priority;
             }
             catch { }
         }
@@ -115,8 +124,9 @@ namespace ProcessMonitor.Services;
         {
             try
             {
-                var process = Process.GetProcessById(processId);
-                process.Kill();
+                using var proc = Process.GetProcessById(processId);
+                proc.Kill();
+                proc.WaitForExit(2000);
             }
             catch { }
         }
@@ -125,13 +135,13 @@ namespace ProcessMonitor.Services;
         {
             try
             {
-                var process = Process.GetProcessById(processId);
+                using var proc = Process.GetProcessById(processId);
                 return new ProcessSnapshot
                 {
                     ProcessId = processId,
-                    ProcessName = process.ProcessName,
-                    MemoryUsage = process.WorkingSet64,
-                    SampleTime = DateTime.Now
+                    ProcessName = proc.ProcessName,
+                    MemoryUsage = proc.WorkingSet64,
+                    SampleTime = DateTime.UtcNow
                 };
             }
             catch
@@ -143,38 +153,50 @@ namespace ProcessMonitor.Services;
         public void StartMonitoringProcess(
             int processId,
             int samplingIntervalMs,
-            Action<ProcessSnapshot> onSnapshot)
+            Action<ProcessSnapshot?> onSnapshot)
         {
-            if (_monitoringTasks.ContainsKey(processId))
+            if (!_monitoringTasks.TryAdd(processId, Task.CompletedTask))
                 return;
-
-            _cancelTokens[processId] = false;
+            
+            var cts = new CancellationTokenSource();
+            
+            if (!_cts.TryAdd(processId, cts))
+            {
+                _monitoringTasks.TryRemove(processId, out _);
+                cts.Dispose();
+                return;
+            }
 
             var task = Task.Run(async () =>
             {
-                while (!_cancelTokens.GetValueOrDefault(processId, false))
+                try
                 {
-                    ProcessSnapshot? snapshot;
-
-                    try
+                    while (!cts.Token.IsCancellationRequested)
                     {
-                        snapshot = GetProcessSnapshot(processId);
-                    }
-                    catch
-                    {
-                        snapshot = null;
-                    }
-                    
-                    onSnapshot?.Invoke(snapshot);
+                        var snapshot = GetProcessSnapshot(processId);
 
-                    if (snapshot == null)
-                        break;
+                        try
+                        {
+                            onSnapshot?.Invoke(snapshot);
+                        }
+                        catch { }
 
-                    await Task.Delay(samplingIntervalMs);
+                        if (snapshot == null)
+                            break;
+
+                        await Task.Delay(samplingIntervalMs, cts.Token);
+                    }
                 }
-
-                _monitoringTasks.Remove(processId);
-                _cancelTokens.Remove(processId);
+                catch (TaskCanceledException)
+                {
+                    // expected on cancellation
+                }
+                finally
+                {
+                    _monitoringTasks.TryRemove(processId, out _);
+                    _cts.TryRemove(processId, out var token);
+                    token?.Dispose();
+                }
             });
 
             _monitoringTasks[processId] = task;
@@ -182,8 +204,10 @@ namespace ProcessMonitor.Services;
 
         public void StopMonitoringProcess(int processId)
         {
-            if (_cancelTokens.ContainsKey(processId))
-                _cancelTokens[processId] = true;
+            if (_cts.TryGetValue(processId, out var cts))
+            {
+                cts.Cancel();
+            }
         }
     }
 

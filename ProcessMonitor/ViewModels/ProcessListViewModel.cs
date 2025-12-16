@@ -20,6 +20,22 @@ namespace ProcessMonitor.ViewModels
         private bool _shouldStopRefresh;
         private bool _isRefreshing;
         
+        private readonly Dictionary<int, ProcessInfo> _processCache = new();
+
+        
+        private readonly MonitoringViewModel _monitoringVm;
+        
+        private string _filterPidText;
+        public string FilterPidText
+        {
+            get => _filterPidText;
+            set
+            {
+                if (Set(ref _filterPidText, value))
+                    RefreshProcessList();
+            }
+        }
+        
         private string _minThreadsText;
         private string _maxThreadsText;
         private string _minMemoryMbText;
@@ -129,8 +145,9 @@ namespace ProcessMonitor.ViewModels
         public ICommand SetPriorityCommand { get; }
         public ICommand KillProcessCommand { get; }
 
-        public ProcessListViewModel()
+        public ProcessListViewModel(MonitoringViewModel monitoringVm)
         {
+            _monitoringVm = monitoringVm;
             RefreshCommand = new RelayCommand(_ => RefreshProcessList());
             SetPriorityCommand = new RelayCommand(ExecuteSetPriority, _ => SelectedProcess != null);
             KillProcessCommand = new RelayCommand(ExecuteKillProcess, _ => SelectedProcess != null);
@@ -153,8 +170,54 @@ namespace ProcessMonitor.ViewModels
                 try
                 {
                     var all = _service.GetAllProcesses();
+                    
+                    var updatedList = new List<ProcessInfo>();
+                    
+                    foreach (var p in all)
+                    {
+                        if (_processCache.TryGetValue(p.ProcessId, out var existing))
+                        {
+                            // aktualizujemy istniejący obiekt, żeby bindingi nie musiały się odpinać
+                            existing.ProcessName = p.ProcessName;
+                            existing.ThreadCount = p.ThreadCount;
+                            existing.WorkingSet = p.WorkingSet;
+                            existing.Priority = p.Priority;
+                            existing.ProcessPath = p.ProcessPath;
+                            existing.StartTime = p.StartTime;
+                            existing.IsMonitored = p.IsMonitored;
+                            existing.MonitoringStartTime = p.MonitoringStartTime;
+
+                            updatedList.Add(existing);
+                        }
+                        else
+                        {
+                            _processCache[p.ProcessId] = p;
+                            updatedList.Add(p);
+                        }
+                        
+                        
+                        var monitored = _monitoringVm.MonitoredProcesses
+                            .FirstOrDefault(m => m.ProcessId == p.ProcessId);
+
+                        if (monitored != null)
+                        {
+                            p.IsMonitored = monitored.IsMonitoring;
+                            p.MonitoringStartTime = monitored.MonitoringStartTime;
+                        }
+                        else
+                        {
+                            p.IsMonitored = false;
+                            p.MonitoringStartTime = null;
+                        }
+                    }
+                    
+                    var pidsNow = new HashSet<int>(all.Select(x => x.ProcessId));
+                    var toRemove = _processCache.Keys.Where(pid => !pidsNow.Contains(pid)).ToList();
+                    foreach (var pid in toRemove)
+                        _processCache.Remove(pid);
 
                     var filterText = FilterText ?? string.Empty;
+                    var filterPidText = FilterPidText ?? string.Empty;
 
                     var filtered = all.Where(p =>
                         (string.IsNullOrEmpty(filterText) ||
@@ -162,11 +225,14 @@ namespace ProcessMonitor.ViewModels
                          p.ProcessId.ToString().Contains(filterText) ||
                          p.ThreadCount.ToString().Contains(filterText) ||
                          (p.WorkingSet / (1024 * 1024)).ToString().Contains(filterText)) &&
+                        
+                        (string.IsNullOrWhiteSpace(filterPidText)
+                         || p.ProcessId.ToString().StartsWith(filterPidText.Trim())) &&
 
-                        (!minThreads.HasValue  || p.ThreadCount >= minThreads.Value) &&
-                        (!maxThreads.HasValue  || p.ThreadCount <= maxThreads.Value) &&
-                        (!minMemoryMb.HasValue || (p.WorkingSet / (1024 * 1024)) >= minMemoryMb.Value) &&
-                        (!maxMemoryMb.HasValue || (p.WorkingSet / (1024 * 1024)) <= maxMemoryMb.Value)
+                         (!minThreads.HasValue  || p.ThreadCount >= minThreads.Value) &&
+                         (!maxThreads.HasValue  || p.ThreadCount <= maxThreads.Value) &&
+                         (!minMemoryMb.HasValue || (p.WorkingSet / (1024 * 1024)) >= minMemoryMb.Value) &&
+                         (!maxMemoryMb.HasValue || (p.WorkingSet / (1024 * 1024)) <= maxMemoryMb.Value)
                     ).ToList();
 
                     var sorted = SortBy switch

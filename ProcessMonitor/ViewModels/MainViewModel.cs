@@ -12,8 +12,9 @@ namespace ProcessMonitor.ViewModels
 
         public MainViewModel()
         {
-            ProcessListViewModel = new ProcessListViewModel();
-            MonitoringViewModel  = new MonitoringViewModel();
+            var monitoringVm = new MonitoringViewModel();
+            MonitoringViewModel = monitoringVm;
+            ProcessListViewModel = new ProcessListViewModel(monitoringVm);
 
             StartMonitoringCommand = new RelayCommand(_ =>
             {
