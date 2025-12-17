@@ -75,7 +75,7 @@
                         <Setter.Value>
                             <ToolTip>
                                 <StackPanel>
-                                    <TextBlock Text="{Binding IsMonitored, StringFormat='Śledzony: {0}'}"/>
+                                    <TextBlock Text="{Binding IsMonitored, StringFormat='Tracked: {0}'}"/>
                                     <TextBlock Text="{Binding MonitoringStartTime,
                                                       StringFormat='Od: {0:G}'}"/>
                                 </StackPanel>
@@ -120,6 +120,7 @@
                     <System:String xmlns:System="clr-namespace:System;assembly=mscorlib">AboveNormal</System:String>
                     <System:String xmlns:System="clr-namespace:System;assembly=mscorlib">High</System:String>
                     <System:String xmlns:System="clr-namespace:System;assembly=mscorlib">RealTime</System:String>
+                    
                 </ComboBox>
 
                 <Button Command="{Binding SetPriorityCommand}"
